@@ -1,0 +1,793 @@
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 1
+Dedication models
+C o m p i l a t i o n
+
+
+   2   
+   3  * Dedication.gms:  Dedication models.
+   4   
+   5  SET Time Time periods /2018 * 2039/;
+   6   
+   7  ALIAS (Time, t, t1, t2);
+   8   
+   9  SCALARS
+  10     Now      'Current year'
+  11     Horizon  'End of the Horizon';
+  12   
+  13  Now = 2001;
+  14  Horizon = CARD(t)-1;
+  15   
+  16  PARAMETER
+  17     tau(t) 'Time in years';
+  18   
+  19  * Note: time starts from 0
+  20   
+  21  tau(t)  = ORD(t)-1;
+  22   
+  23   
+  24  SET
+  25     Bonds Bonds universe
+  26      /23-GB   ,     21-GB              ,     39-GB            ,     19-GB,
+  27      24-GB    ,     Danske-Stat-2020   ,     Danske-Stat-2025 ,     Danske-Stat-2027/
+  28   
+  29  ALIAS(Bonds, i);
+  30   
+  31   
+  32  SCALAR
+  33           spread         'Borrowing spread over the reinvestment rate';
+  34   
+  35  Parameters
+  36   
+  37      Price(i)  'Bond_price'
+  38      /23-GB 1.08485 ,   21-GB 1.10626            ,   39-GB 1.7114               ,   19-GB 1.04659  ,
+  39      24-GB 1.424    ,   Danske-Stat-2020 1.0176  ,   Danske-Stat-2025 1.11595   ,   Danske-Stat-2027 1.0173/
+  40   
+  41      Coupon(i) 'Coupons'
+  42      /23-GB 0.0150   ,    21-GB 0.0300            ,     39-GB 0.0450              ,   19-GB 0.0400 ,
+  43      24-GB 0.0700    ,    Danske-Stat-2020 0.0025 ,     Danske-Stat-2025 0.0175   ,   Danske-Stat-2027 0.0050/
+  44   
+  45      Maturity(i) 'Maturities'
+  46      /23-GB 5  ,     21-GB 3              ,     39-GB 21             ,    19-GB 1 ,
+  47      24-GB 6   ,     Danske-Stat-2020 2   ,     Danske-Stat-2025 7   ,    Danske-Stat-2027 9/
+  48   
+  49      Liability(t)   Stream of liabilities
+  50      /2019 =  1000000000, 2020 = 1000000000, 2021 = 1000000000, 2022 = 1000000000, 2023 = 1000000000, 2024 = 1000000000,
+  51      2025 =  1000000000, 2026 =  1000000000, 2027 = 1000000000, 2028 = 1000000000, 2029 = 1000000000, 2030 = 1000000000,
+  52      2031 =  1000000000, 2032 =  1000000000, 2033 = 1000000000, 2034 = 1000000000, 2035 = 1000000000, 2036 = 1000000000,
+  53      2037 =  1000000000, 2038 =  1000000000, 2039 = 1000000000/
+  54   
+  55      rf(t)          'Reinvestment rates'
+  56   
+  57      F(t, i)        'Cashflows';
+  58   
+  59  * Calculate the ex-coupon cashflow of Bond i in year t:
+  60   
+  61  F(t,i) = 1$(tau(t) = Maturity(i))
+  62              +  coupon(i) $ (tau(t) <= Maturity(i) AND tau(t) > 0);
+  63   
+  64  rf(t) = -0.02;
+  65  spread = 0.04;
+  66   
+  67  DISPLAY F;
+  68   
+  69   
+  70  POSITIVE VARIABLES
+  71          x(i)           'Face value purchased'
+  72          surplus(t)     'Amount of money reinvested'
+  73          borrow(t)      'Amount of money borrowed'
+  74  ;
+  75   
+  76   
+  77  VARIABLE
+  78          v0             'Upfront investment'
+  79          VplusFinal     'Final value of vplus to be maximized in model 2'
+  80  ;
+  81   
+  82  SCALAR b0              'fixed budget';
+  83   
+  84  EQUATION
+  85  Initial(t)             'Initialization of the investment'
+  86  Initial2(t)            'Initialization of the investment in model 2'
+  87  CashFlowCon(t)         'Equations defining the cashflow balance'
+  88  Final(t)               'Horison constraint'
+  89  FinalSurplus           'Final surplus to be maximized in model 2'
+  90  ;
+  91   
+  92  Initial(t)$(tau(t)=0)..      v0 =E= SUM(i, Price(i) * x(i)) + surplus(t) - borrow(t);
+  93   
+  94  Initial2(t)$(tau(t)=0)..      b0 =E= SUM(i, Price(i) * x(i)) + surplus(t) - borrow(t);
+  95   
+  96   
+  97  CashFlowCon(t)$(tau(t)>0)..  SUM(i, F(t,i) * x(i) ) + borrow(t) + ( ( 1 + rf(t-1) ) * surplus(t-1) ) =E=
+  98                               surplus(t) + Liability(t)  + ( 1 + rf(t-1) + spread ) * borrow(t-1);
+  99   
+ 100  Final(t)$(tau(t)=Horizon)..  borrow(t) =E= 0;
+ 101   
+ 102  FinalSurplus..               VplusFinal =E= sum(t$(ord(t)=card(t)), surplus(t) );
+ 103   
+ 104   
+ 105  MODEL Dedication 'PFO Model 4.2.3' /Initial, CashFlowCon, Final/;
+ 106   
+ 107  MODEL Dedication2 /Initial2, CashFlowCon, Final, FinalSurplus/
+ 108   
+ 109  SOLVE Dedication MINIMIZING v0 USING LP;
+ 110  DISPLAY v0.l, borrow.l, surplus.l, x.l;
+ 111   
+ 112   
+ 113  b0 = v0.l;
+ 114   
+ 115  SOLVE Dedication2 MAXIMIZING VplusFinal USING LP;
+ 116  DISPLAY VplusFinal.l, borrow.l, surplus.l, x.l;
+ 117   
+ 118   
+
+
+COMPILATION TIME     =        0.001 SECONDS      3 MB  28.2.0 r750fa45 DEX-DEG
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 2
+Dedication models
+E x e c u t i o n
+
+
+----     67 PARAMETER F  Cashflows
+
+           23-GB       21-GB       39-GB       19-GB       24-GB  Danske-St~  Danske-St~  Danske-St~
+
+2019       0.015       0.030       0.045       1.040       0.070       0.002       0.018       0.005
+2020       0.015       0.030       0.045                   0.070       1.002       0.018       0.005
+2021       0.015       1.030       0.045                   0.070                   0.018       0.005
+2022       0.015                   0.045                   0.070                   0.018       0.005
+2023       1.015                   0.045                   0.070                   0.018       0.005
+2024                               0.045                   1.070                   0.018       0.005
+2025                               0.045                                           1.018       0.005
+2026                               0.045                                                       0.005
+2027                               0.045                                                       1.005
+2028                               0.045
+2029                               0.045
+2030                               0.045
+2031                               0.045
+2032                               0.045
+2033                               0.045
+2034                               0.045
+2035                               0.045
+2036                               0.045
+2037                               0.045
+2038                               0.045
+2039                               1.045
+
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 3
+Dedication models
+Equation Listing    SOLVE Dedication Using LP From line 109
+
+
+---- Initial  =E=  Initialization of the investment
+
+Initial(2018)..  - 1.08485*x(23-GB) - 1.10626*x(21-GB) - 1.7114*x(39-GB) - 1.04659*x(19-GB) - 1.424*x(24-GB) - 1.0176*x(Danske-Stat-2020) - 1.11595*x(Danske-Stat-2025) - 1.0173*x(Danske-Stat-2027) - surplus(2018) + borrow(2018) + v0 =E= 0 ; (LHS = 0)
+     
+
+---- CashFlowCon  =E=  Equations defining the cashflow balance
+
+CashFlowCon(2019)..  0.015*x(23-GB) + 0.03*x(21-GB) + 0.045*x(39-GB) + 1.04*x(19-GB) + 0.07*x(24-GB) + 0.0025*x(Danske-Stat-2020) + 0.0175*x(Danske-Stat-2025) + 0.005*x(Danske-Stat-2027) + 0.98*surplus(2018) - surplus(2019) - 1.02*borrow(2018)
+     
+      + borrow(2019) =E= 1000000000 ; (LHS = 0, INFES = 1000000000 ****)
+     
+CashFlowCon(2020)..  0.015*x(23-GB) + 0.03*x(21-GB) + 0.045*x(39-GB) + 0.07*x(24-GB) + 1.0025*x(Danske-Stat-2020) + 0.0175*x(Danske-Stat-2025) + 0.005*x(Danske-Stat-2027) + 0.98*surplus(2019) - surplus(2020) - 1.02*borrow(2019) + borrow(2020) =E= 
+     1000000000 ; (LHS = 0, INFES = 1000000000 ****)
+     
+CashFlowCon(2021)..  0.015*x(23-GB) + 1.03*x(21-GB) + 0.045*x(39-GB) + 0.07*x(24-GB) + 0.0175*x(Danske-Stat-2025) + 0.005*x(Danske-Stat-2027) + 0.98*surplus(2020) - surplus(2021) - 1.02*borrow(2020) + borrow(2021) =E= 1000000000 ;
+     
+      (LHS = 0, INFES = 1000000000 ****)
+     
+REMAINING 18 ENTRIES SKIPPED
+
+
+---- Final  =E=  Horison constraint
+
+Final(2039)..  borrow(2039) =E= 0 ; (LHS = 0)
+     
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 4
+Dedication models
+Column Listing      SOLVE Dedication Using LP From line 109
+
+
+---- x  Face value purchased
+
+x(23-GB)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -1.0849  Initial(2018)
+        0.015   CashFlowCon(2019)
+        0.015   CashFlowCon(2020)
+        0.015   CashFlowCon(2021)
+        0.015   CashFlowCon(2022)
+        1.015   CashFlowCon(2023)
+
+x(21-GB)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -1.1063  Initial(2018)
+        0.03    CashFlowCon(2019)
+        0.03    CashFlowCon(2020)
+        1.03    CashFlowCon(2021)
+
+x(39-GB)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -1.7114  Initial(2018)
+        0.045   CashFlowCon(2019)
+        0.045   CashFlowCon(2020)
+        0.045   CashFlowCon(2021)
+        0.045   CashFlowCon(2022)
+        0.045   CashFlowCon(2023)
+        0.045   CashFlowCon(2024)
+        0.045   CashFlowCon(2025)
+        0.045   CashFlowCon(2026)
+        0.045   CashFlowCon(2027)
+        0.045   CashFlowCon(2028)
+        0.045   CashFlowCon(2029)
+        0.045   CashFlowCon(2030)
+        0.045   CashFlowCon(2031)
+        0.045   CashFlowCon(2032)
+        0.045   CashFlowCon(2033)
+        0.045   CashFlowCon(2034)
+        0.045   CashFlowCon(2035)
+        0.045   CashFlowCon(2036)
+        0.045   CashFlowCon(2037)
+        0.045   CashFlowCon(2038)
+        1.045   CashFlowCon(2039)
+
+REMAINING 5 ENTRIES SKIPPED
+
+---- surplus  Amount of money reinvested
+
+surplus(2018)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -1       Initial(2018)
+        0.98    CashFlowCon(2019)
+
+surplus(2019)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -1       CashFlowCon(2019)
+        0.98    CashFlowCon(2020)
+
+surplus(2020)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -1       CashFlowCon(2020)
+        0.98    CashFlowCon(2021)
+
+REMAINING 19 ENTRIES SKIPPED
+
+---- borrow  Amount of money borrowed
+
+borrow(2018)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        1       Initial(2018)
+       -1.02    CashFlowCon(2019)
+
+borrow(2019)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        1       CashFlowCon(2019)
+       -1.02    CashFlowCon(2020)
+
+borrow(2020)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        1       CashFlowCon(2020)
+       -1.02    CashFlowCon(2021)
+
+REMAINING 19 ENTRIES SKIPPED
+
+---- v0  Upfront investment
+
+v0
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       Initial(2018)
+
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 5
+Dedication models
+Model Statistics    SOLVE Dedication Using LP From line 109
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           3     SINGLE EQUATIONS           23
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES           53
+NON ZERO ELEMENTS           150
+
+
+GENERATION TIME      =        0.013 SECONDS      4 MB  28.2.0 r750fa45 DEX-DEG
+
+
+EXECUTION TIME       =        0.014 SECONDS      4 MB  28.2.0 r750fa45 DEX-DEG
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 6
+Dedication models
+Solution Report     SOLVE Dedication Using LP From line 109
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   Dedication          OBJECTIVE  v0
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  109
+
+**** SOLVER STATUS     1 Normal Completion         
+**** MODEL STATUS      1 Optimal                   
+**** OBJECTIVE VALUE      19930667374.5989
+
+ RESOURCE USAGE, LIMIT          0.045      1000.000
+ ITERATION COUNT, LIMIT        28    2000000000
+
+IBM ILOG CPLEX   28.2.0 r750fa45 Released Aug 19, 2019 DEG x86 64bit/Mac OS X 
+Cplex 12.9.0.0
+
+Space for names approximately 0.00 Mb
+Use option 'names no' to turn use of names off
+LP status(1): optimal
+Cplex Time: 0.02sec (det. 0.15 ticks)
+Optimal solution found.
+Objective : 19930667374.598850
+
+
+---- EQU Initial  Initialization of the investment
+
+            LOWER          LEVEL          UPPER         MARGINAL
+
+2018          .              .              .             1.0000      
+
+---- EQU CashFlowCon  Equations defining the cashflow balance
+
+            LOWER          LEVEL          UPPER         MARGINAL
+
+2019   1.0000000E+9   1.0000000E+9   1.0000000E+9         1.0063      
+2020   1.0000000E+9   1.0000000E+9   1.0000000E+9         1.0126      
+2021   1.0000000E+9   1.0000000E+9   1.0000000E+9         1.0152      
+2022   1.0000000E+9   1.0000000E+9   1.0000000E+9         1.0289      
+2023   1.0000000E+9   1.0000000E+9   1.0000000E+9         1.0088      
+2024   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.9990      
+2025   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.9923      
+2026   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.9916      
+2027   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.9722      
+2028   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.9920      
+2029   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.9929      
+2030   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.9734      
+2031   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.9543      
+2032   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.9356      
+2033   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.9173      
+2034   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.8993      
+2035   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.8817      
+2036   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.8644      
+2037   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.8474      
+2038   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.8308      
+2039   1.0000000E+9   1.0000000E+9   1.0000000E+9         0.8145      
+
+---- EQU Final  Horison constraint
+
+            LOWER          LEVEL          UPPER         MARGINAL
+
+2039          .              .              .            -0.8145      
+
+---- VAR x  Face value purchased
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+23-GB                     .       1.1461121E+9        +INF             .          
+21-GB                     .       5.5085655E+8        +INF             .          
+39-GB                     .       7.8629987E+9        +INF             .          
+19-GB                     .       5.2834889E+8        +INF             .          
+24-GB                     .       5.8457393E+8        +INF             .          
+Danske-Stat-2020          .       5.4948284E+8        +INF             .          
+Danske-Stat-2025          .       6.2549410E+8        +INF             .          
+Danske-Stat-2027          .       1.9449614E+9        +INF             .          
+
+---- VAR surplus  Amount of money reinvested
+
+            LOWER          LEVEL          UPPER         MARGINAL
+
+2018          .              .            +INF            0.0138      
+2019          .              .            +INF            0.0140      
+2020          .              .            +INF            0.0176      
+2021          .              .            +INF            0.0069      
+2022          .              .            +INF            0.0404      
+2023          .              .            +INF            0.0297      
+2024          .              .            +INF            0.0265      
+2025          .              .            +INF            0.0206      
+2026          .              .            +INF            0.0389      
+2027          .       6.5935210E+8        +INF             .          
+2028          .              .            +INF            0.0190      
+2029          .              .            +INF            0.0389      
+2030          .              .            +INF            0.0382      
+2031          .              .            +INF            0.0374      
+2032          .              .            +INF            0.0367      
+2033          .              .            +INF            0.0360      
+2034          .              .            +INF            0.0353      
+2035          .              .            +INF            0.0346      
+2036          .              .            +INF            0.0339      
+2037          .              .            +INF            0.0332      
+2038          .              .            +INF            0.0326      
+2039          .              .            +INF            0.8145      
+
+---- VAR borrow  Amount of money borrowed
+
+            LOWER          LEVEL          UPPER         MARGINAL
+
+2018          .              .            +INF            0.0265      
+2019          .              .            +INF            0.0265      
+2020          .              .            +INF            0.0230      
+2021          .              .            +INF            0.0343      
+2022          .       5.6738225E+8        +INF             .          
+2023          .              .            +INF            0.0102      
+2024          .              .            +INF            0.0132      
+2025          .              .            +INF            0.0191      
+2026          .       6.3644025E+8        +INF             .          
+2027          .              .            +INF            0.0397      
+2028          .              .            +INF            0.0207      
+2029          .       6.4616506E+8        +INF             .          
+2030          .       1.3052534E+9        +INF             .          
+2031          .       1.9775235E+9        +INF             .          
+2032          .       2.6632391E+9        +INF             .          
+2033          .       3.3626689E+9        +INF             .          
+2034          .       4.0760873E+9        +INF             .          
+2035          .       4.8037742E+9        +INF             .          
+2036          .       5.5460147E+9        +INF             .          
+2037          .       6.3031000E+9        +INF             .          
+2038          .       7.0753271E+9        +INF             .          
+2039          .              .            +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR v0                -INF      1.993067E+10        +INF             .          
+
+  v0  Upfront investment
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 7
+Dedication models
+E x e c u t i o n
+
+
+----    110 VARIABLE v0.L                  =  1.99307E+10  Upfront investment
+
+----    110 VARIABLE borrow.L  Amount of money borrowed
+
+2022 5.673822E+8,    2026 6.364403E+8,    2029 6.461651E+8,    2030 1.305253E+9,    2031 1.977524E+9,    2032 2.663239E+9,    2033 3.362669E+9,    2034 4.076087E+9,    2035 4.803774E+9,    2036 5.546015E+9,    2037 6.303100E+9,    2038 7.075327E+9
+
+
+----    110 VARIABLE surplus.L  Amount of money reinvested
+
+2027 6.593521E+8
+
+
+----    110 VARIABLE x.L  Face value purchased
+
+23-GB            1.146112E+9,    21-GB            5.508566E+8,    39-GB            7.862999E+9,    19-GB            5.283489E+8,    24-GB            5.845739E+8,    Danske-Stat-2020 5.494828E+8,    Danske-Stat-2025 6.254941E+8
+Danske-Stat-2027 1.944961E+9
+
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 8
+Dedication models
+Equation Listing    SOLVE Dedication2 Using LP From line 115
+
+
+---- Initial2  =E=  Initialization of the investment in model 2
+
+Initial2(2018)..  - 1.08485*x(23-GB) - 1.10626*x(21-GB) - 1.7114*x(39-GB) - 1.04659*x(19-GB) - 1.424*x(24-GB) - 1.0176*x(Danske-Stat-2020) - 1.11595*x(Danske-Stat-2025) - 1.0173*x(Danske-Stat-2027) - surplus(2018) + borrow(2018) =E= -19930667374.5989 ;
+     
+      (LHS = -19930667374.5988)
+     
+
+---- CashFlowCon  =E=  Equations defining the cashflow balance
+
+CashFlowCon(2019)..  0.015*x(23-GB) + 0.03*x(21-GB) + 0.045*x(39-GB) + 1.04*x(19-GB) + 0.07*x(24-GB) + 0.0025*x(Danske-Stat-2020) + 0.0175*x(Danske-Stat-2025) + 0.005*x(Danske-Stat-2027) + 0.98*surplus(2018) - surplus(2019) - 1.02*borrow(2018)
+     
+      + borrow(2019) =E= 1000000000 ; (LHS = 1000000000)
+     
+CashFlowCon(2020)..  0.015*x(23-GB) + 0.03*x(21-GB) + 0.045*x(39-GB) + 0.07*x(24-GB) + 1.0025*x(Danske-Stat-2020) + 0.0175*x(Danske-Stat-2025) + 0.005*x(Danske-Stat-2027) + 0.98*surplus(2019) - surplus(2020) - 1.02*borrow(2019) + borrow(2020) =E= 
+     1000000000 ; (LHS = 1000000000)
+     
+CashFlowCon(2021)..  0.015*x(23-GB) + 1.03*x(21-GB) + 0.045*x(39-GB) + 0.07*x(24-GB) + 0.0175*x(Danske-Stat-2025) + 0.005*x(Danske-Stat-2027) + 0.98*surplus(2020) - surplus(2021) - 1.02*borrow(2020) + borrow(2021) =E= 1000000000 ; (LHS = 1000000000)
+     
+REMAINING 18 ENTRIES SKIPPED
+
+
+---- Final  =E=  Horison constraint
+
+Final(2039)..  borrow(2039) =E= 0 ; (LHS = 0)
+     
+
+---- FinalSurplus  =E=  Final surplus to be maximized in model 2
+
+FinalSurplus..  - surplus(2039) + VplusFinal =E= 0 ; (LHS = 0)
+     
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 9
+Dedication models
+Column Listing      SOLVE Dedication2 Using LP From line 115
+
+
+---- x  Face value purchased
+
+x(23-GB)
+                (.LO, .L, .UP, .M = 0, 1146112139.29808, +INF, 0)
+       -1.0849  Initial2(2018)
+        0.015   CashFlowCon(2019)
+        0.015   CashFlowCon(2020)
+        0.015   CashFlowCon(2021)
+        0.015   CashFlowCon(2022)
+        1.015   CashFlowCon(2023)
+
+x(21-GB)
+                (.LO, .L, .UP, .M = 0, 550856550.657541, +INF, 0)
+       -1.1063  Initial2(2018)
+        0.03    CashFlowCon(2019)
+        0.03    CashFlowCon(2020)
+        1.03    CashFlowCon(2021)
+
+x(39-GB)
+                (.LO, .L, .UP, .M = 0, 7862998707.14748, +INF, 0)
+       -1.7114  Initial2(2018)
+        0.045   CashFlowCon(2019)
+        0.045   CashFlowCon(2020)
+        0.045   CashFlowCon(2021)
+        0.045   CashFlowCon(2022)
+        0.045   CashFlowCon(2023)
+        0.045   CashFlowCon(2024)
+        0.045   CashFlowCon(2025)
+        0.045   CashFlowCon(2026)
+        0.045   CashFlowCon(2027)
+        0.045   CashFlowCon(2028)
+        0.045   CashFlowCon(2029)
+        0.045   CashFlowCon(2030)
+        0.045   CashFlowCon(2031)
+        0.045   CashFlowCon(2032)
+        0.045   CashFlowCon(2033)
+        0.045   CashFlowCon(2034)
+        0.045   CashFlowCon(2035)
+        0.045   CashFlowCon(2036)
+        0.045   CashFlowCon(2037)
+        0.045   CashFlowCon(2038)
+        1.045   CashFlowCon(2039)
+
+REMAINING 5 ENTRIES SKIPPED
+
+---- surplus  Amount of money reinvested
+
+surplus(2018)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0.0137901923076924)
+       -1       Initial2(2018)
+        0.98    CashFlowCon(2019)
+
+surplus(2019)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0.0140348172837136)
+       -1       CashFlowCon(2019)
+        0.98    CashFlowCon(2020)
+
+surplus(2020)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0.0176212678442059)
+       -1       CashFlowCon(2020)
+        0.98    CashFlowCon(2021)
+
+REMAINING 19 ENTRIES SKIPPED
+
+---- borrow  Amount of money borrowed
+
+borrow(2018)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0.0264632692307691)
+        1       Initial2(2018)
+       -1.02    CashFlowCon(2019)
+
+borrow(2019)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0.0264672937847692)
+        1       CashFlowCon(2019)
+       -1.02    CashFlowCon(2020)
+
+borrow(2020)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0.0229881814973394)
+        1       CashFlowCon(2020)
+       -1.02    CashFlowCon(2021)
+
+REMAINING 19 ENTRIES SKIPPED
+
+---- VplusFinal  Final value of vplus to be maximized in model 2
+
+VplusFinal
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       FinalSurplus
+
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 10
+Dedication models
+Model Statistics    SOLVE Dedication2 Using LP From line 115
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           4     SINGLE EQUATIONS           24
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES           53
+NON ZERO ELEMENTS           151
+
+
+GENERATION TIME      =        0.007 SECONDS      3 MB  28.2.0 r750fa45 DEX-DEG
+
+
+EXECUTION TIME       =        0.009 SECONDS      3 MB  28.2.0 r750fa45 DEX-DEG
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 11
+Dedication models
+Solution Report     SOLVE Dedication2 Using LP From line 115
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   Dedication2         OBJECTIVE  VplusFinal
+     TYPE    LP                  DIRECTION  MAXIMIZE
+     SOLVER  CPLEX               FROM LINE  115
+
+**** SOLVER STATUS     1 Normal Completion         
+**** MODEL STATUS      1 Optimal                   
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.011      1000.000
+ ITERATION COUNT, LIMIT        12    2000000000
+
+IBM ILOG CPLEX   28.2.0 r750fa45 Released Aug 19, 2019 DEG x86 64bit/Mac OS X 
+Cplex 12.9.0.0
+
+Space for names approximately 0.00 Mb
+Use option 'names no' to turn use of names off
+LP status(1): optimal
+Cplex Time: 0.00sec (det. 0.17 ticks)
+Optimal solution found.
+Objective :           0.000006
+
+
+---- EQU Initial2  Initialization of the investment in model 2
+
+            LOWER          LEVEL          UPPER         MARGINAL
+
+2018   -1.99307E+10   -1.99307E+10   -1.99307E+10        -1.2277      
+
+---- EQU CashFlowCon  Equations defining the cashflow balance
+
+            LOWER          LEVEL          UPPER         MARGINAL
+
+2019   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.2355      
+2020   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.2431      
+2021   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.2464      
+2022   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.2633      
+2023   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.2385      
+2024   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.2265      
+2025   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.2183      
+2026   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.2174      
+2027   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.1935      
+2028   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.2179      
+2029   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.2190      
+2030   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.1951      
+2031   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.1717      
+2032   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.1487      
+2033   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.1262      
+2034   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.1041      
+2035   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.0824      
+2036   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.0612      
+2037   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.0404      
+2038   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.0200      
+2039   1.0000000E+9   1.0000000E+9   1.0000000E+9        -1.0000      
+
+---- EQU Final  Horison constraint
+
+            LOWER          LEVEL          UPPER         MARGINAL
+
+2039          .              .              .             1.0000      
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- EQU FinalSurp~          .              .              .             1.0000      
+
+  FinalSurplus  Final surplus to be maximized in model 2
+
+---- VAR x  Face value purchased
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+23-GB                     .       1.1461121E+9        +INF             .          
+21-GB                     .       5.5085655E+8        +INF             .          
+39-GB                     .       7.8629987E+9        +INF             .          
+19-GB                     .       5.2834889E+8        +INF             .          
+24-GB                     .       5.8457393E+8        +INF             .          
+Danske-Stat-2020          .       5.4948284E+8        +INF             .          
+Danske-Stat-2025          .       6.2549410E+8        +INF             .          
+Danske-Stat-2027          .       1.9449614E+9        +INF             .          
+
+---- VAR surplus  Amount of money reinvested
+
+            LOWER          LEVEL          UPPER         MARGINAL
+
+2018          .              .            +INF           -0.0169      
+2019          .              .            +INF           -0.0172      
+2020          .              .            +INF           -0.0216      
+2021          .              .            +INF           -0.0084      
+2022          .              .            +INF           -0.0495      
+2023          .              .            +INF           -0.0365      
+2024          .              .            +INF           -0.0326      
+2025          .              .            +INF           -0.0253      
+2026          .              .            +INF           -0.0477      
+2027          .       6.5935210E+8        +INF             .          
+2028          .              .            +INF           -0.0233      
+2029          .              .            +INF           -0.0478      
+2030          .              .            +INF           -0.0469      
+2031          .              .            +INF           -0.0459      
+2032          .              .            +INF           -0.0450      
+2033          .              .            +INF           -0.0442      
+2034          .              .            +INF           -0.0433      
+2035          .              .            +INF           -0.0424      
+2036          .              .            +INF           -0.0416      
+2037          .              .            +INF           -0.0408      
+2038          .              .            +INF           -0.0400      
+2039          .       9.5367432E-6        +INF             .          
+
+---- VAR borrow  Amount of money borrowed
+
+            LOWER          LEVEL          UPPER         MARGINAL
+
+2018          .              .            +INF           -0.0325      
+2019          .              .            +INF           -0.0325      
+2020          .              .            +INF           -0.0282      
+2021          .              .            +INF           -0.0421      
+2022          .       5.6738225E+8        +INF             .          
+2023          .              .            +INF           -0.0126      
+2024          .              .            +INF           -0.0161      
+2025          .              .            +INF           -0.0234      
+2026          .       6.3644025E+8        +INF             .          
+2027          .              .            +INF           -0.0487      
+2028          .              .            +INF           -0.0255      
+2029          .       6.4616506E+8        +INF             .          
+2030          .       1.3052534E+9        +INF             .          
+2031          .       1.9775235E+9        +INF             .          
+2032          .       2.6632391E+9        +INF             .          
+2033          .       3.3626689E+9        +INF             .          
+2034          .       4.0760873E+9        +INF             .          
+2035          .       4.8037742E+9        +INF             .          
+2036          .       5.5460147E+9        +INF             .          
+2037          .       6.3031000E+9        +INF             .          
+2038          .       7.0753271E+9        +INF             .          
+2039          .              .            +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR VplusFinal        -INF      5.7220459E-6        +INF             .          
+
+  VplusFinal  Final value of vplus to be maximized in model 2
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/30/19 19:21:38 Page 12
+Dedication models
+E x e c u t i o n
+
+
+----    116 VARIABLE VplusFinal.L          =  5.722046E-6  Final value of vplus to be maximized in model 2
+
+----    116 VARIABLE borrow.L  Amount of money borrowed
+
+2022 5.673822E+8,    2026 6.364403E+8,    2029 6.461651E+8,    2030 1.305253E+9,    2031 1.977524E+9,    2032 2.663239E+9,    2033 3.362669E+9,    2034 4.076087E+9,    2035 4.803774E+9,    2036 5.546015E+9,    2037 6.303100E+9,    2038 7.075327E+9
+
+
+----    116 VARIABLE surplus.L  Amount of money reinvested
+
+2027 6.593521E+8,    2039 9.536743E-6
+
+
+----    116 VARIABLE x.L  Face value purchased
+
+23-GB            1.146112E+9,    21-GB            5.508566E+8,    39-GB            7.862999E+9,    19-GB            5.283489E+8,    24-GB            5.845739E+8,    Danske-Stat-2020 5.494828E+8,    Danske-Stat-2025 6.254941E+8
+Danske-Stat-2027 1.944961E+9
+
+
+
+EXECUTION TIME       =        0.002 SECONDS      3 MB  28.2.0 r750fa45 DEX-DEG
+
+
+USER: Course License Fall 2019                       G190805/0001AO-GEN
+      Technical University of Denmark, Management Engineering    DCE146
+      License for teaching and research at degree granting institutions
+
+
+**** FILE SUMMARY
+
+Input      /Users/yuesongyang/Desktop/Optimization_In_Finance/Q4_Dedication.gms
+Output     /Users/yuesongyang/Desktop/Optimization_In_Finance/Q4_Dedication.lst

@@ -1,0 +1,135 @@
+--- Job Q4_Dedication.gms Start 10/30/19 19:21:38 28.2.0 r750fa45 DEX-DEG x86 64bit/Mac OS X
+--- GAMS Parameters defined
+    Input /Users/yuesongyang/Desktop/Optimization_In_Finance/Q4_Dedication.gms
+    PageSize 0
+    ScrDir /Users/yuesongyang/Desktop/Optimization_In_Finance/225a/
+    SysDir /Applications/GAMS28.2/sysdir/
+    LogOption 3
+    ErrMsg 1
+    ErrorLog 99
+    IDE 1
+    LstTitleLeftAligned 1
+GAMS 28.2.0   Copyright (C) 1987-2019 GAMS Development. All rights reserved
+Licensee: Course License Fall 2019                       G190805/0001AO-GEN
+          Technical University of Denmark, Management Engineering    DCE146
+          License for teaching and research at degree granting institutions
+          License Admin: Thomas Stidsen, thst@man.dtu.dk                   
+--- Starting compilation
+--- Q4_Dedication.gms(118) 3 Mb
+--- Starting execution: elapsed 0:00:00.009
+--- Q4_Dedication.gms(67) 4 Mb
+--- Generating LP model Dedication
+--- Q4_Dedication.gms(109) 4 Mb
+---   23 rows  53 columns  150 non-zeroes
+--- Executing CPLEX: elapsed 0:00:00.023
+
+IBM ILOG CPLEX   28.2.0 r750fa45 Released Aug 19, 2019 DEG x86 64bit/Mac OS X 
+Cplex 12.9.0.0
+
+Reading data...
+Starting Cplex...
+Space for names approximately 0.00 Mb
+Use option 'names no' to turn use of names off
+CPXPARAM_Advance                                 0
+CPXPARAM_Simplex_Display                         2
+CPXPARAM_Threads                                 1
+CPXPARAM_Parallel                                1
+CPXPARAM_Simplex_Limits_Iterations               2000000000
+CPXPARAM_TimeLimit                               1000
+CPXPARAM_Tune_TimeLimit                          200
+Tried aggregator 1 time.
+LP Presolve eliminated 2 rows and 4 columns.
+Reduced LP has 21 rows, 49 columns, and 135 nonzeros.
+Presolve time = 0.00 sec. (0.05 ticks)
+Initializing dual steep norms . . .
+
+Iteration      Dual Objective            In Variable           Out Variable
+     1 sI            0.980391           borrow(2018)          surplus(2019)
+     2 sI            0.961167           borrow(2019)          surplus(2020)
+     3 sI            0.905728           borrow(2020)CashFlowCon(2021) artif
+     4 sI            0.887967           borrow(2023)          surplus(2024)
+     5 sI            0.870555           borrow(2024)          surplus(2025)
+     6 sI            0.853484           borrow(2025)          surplus(2026)
+     7 sI            0.836748           borrow(2026)CashFlowCon(2027) artif
+     8 sI            0.820340           borrow(2027)          surplus(2028)
+     9 sI            0.804254           borrow(2028)          surplus(2029)
+    10 sI            0.788483           borrow(2029)          surplus(2030)
+    11 sI            0.773022           borrow(2030)          surplus(2031)
+    12 sI            0.757863           borrow(2031)          surplus(2032)
+    13 sI            0.743002           borrow(2032)          surplus(2033)
+    14 sI            0.728432           borrow(2033)          surplus(2034)
+    15 sI            0.714148           borrow(2034)CashFlowCon(2035) artif
+    16 sI            0.700143           borrow(2035)          surplus(2036)
+    17 sI            0.686414           borrow(2036)          surplus(2037)
+    18 sI            0.672953           borrow(2037)          surplus(2038)
+    19 sI            0.000000           borrow(2038)CashFlowCon(2039) slack
+    20     17461381369.347969               x(19-GB)           borrow(2018)
+    21     17894159559.481491    x(Danske-Stat-2020)           borrow(2019)
+    22     18254578889.800747               x(21-GB)           borrow(2020)
+    23     18768662891.842987               x(23-GB)           borrow(2021)
+    24     18907788027.151157               x(24-GB)           borrow(2023)
+    25     19076784834.687382    x(Danske-Stat-2025)           borrow(2024)
+    26     19307977146.883461    x(Danske-Stat-2027)           borrow(2025)
+    27     19727608843.511681          surplus(2027)           borrow(2027)
+    28     19930667374.598846               x(39-GB)           borrow(2028)
+LP status(1): optimal
+Cplex Time: 0.02sec (det. 0.15 ticks)
+
+Optimal solution found.
+Objective : 19930667374.598850
+
+--- Restarting execution
+--- Q4_Dedication.gms(109) 2 Mb
+--- Reading solution for model Dedication
+--- Executing after solve: elapsed 0:00:00.120
+--- Q4_Dedication.gms(113) 3 Mb
+--- Generating LP model Dedication2
+--- Q4_Dedication.gms(115) 3 Mb
+---   24 rows  53 columns  151 non-zeroes
+--- Executing CPLEX: elapsed 0:00:00.127
+
+IBM ILOG CPLEX   28.2.0 r750fa45 Released Aug 19, 2019 DEG x86 64bit/Mac OS X 
+Cplex 12.9.0.0
+
+Reading data...
+Starting Cplex...
+Space for names approximately 0.00 Mb
+Use option 'names no' to turn use of names off
+CPXPARAM_Advance                                 2
+CPXPARAM_Simplex_Display                         2
+CPXPARAM_Threads                                 1
+CPXPARAM_Parallel                                1
+CPXPARAM_Simplex_Limits_Iterations               2000000000
+CPXPARAM_TimeLimit                               1000
+CPXPARAM_Tune_TimeLimit                          200
+Tried aggregator 1 time.
+LP Presolve eliminated 2 rows and 2 columns.
+Reduced LP has 22 rows, 51 columns, and 147 nonzeros.
+Presolve time = 0.00 sec. (0.06 ticks)
+
+Iteration      Dual Objective            In Variable           Out Variable
+     1 sI            0.057762          surplus(2039)           borrow(2022)
+     2 sI            0.004297          surplus(2022)           borrow(2021)
+     3 sI            0.000000          surplus(2021)           borrow(2020)
+     4      1692396025.334865           borrow(2020)           borrow(2019)
+     5      1381776270.043449               x(24-GB)           borrow(2023)
+     6      1234288107.579100    x(Danske-Stat-2025)           borrow(2024)
+     7       929783581.377367    x(Danske-Stat-2027)           borrow(2025)
+     8       367357177.083068          surplus(2027)           borrow(2027)
+     9        75062196.479346               x(39-GB)           borrow(2028)
+    10        27208677.532343    x(Danske-Stat-2020)          surplus(2022)
+    11         4714125.641896           borrow(2022)           borrow(2020)
+    12               0.000013               x(21-GB)          surplus(2021)
+LP status(1): optimal
+Cplex Time: 0.00sec (det. 0.17 ticks)
+
+Optimal solution found.
+Objective :           0.000006
+
+--- Restarting execution
+--- Q4_Dedication.gms(115) 2 Mb
+--- Reading solution for model Dedication2
+--- Executing after solve: elapsed 0:00:00.179
+--- Q4_Dedication.gms(116) 3 Mb
+*** Status: Normal completion
+--- Job Q4_Dedication.gms Stop 10/30/19 19:21:38 elapsed 0:00:00.179
