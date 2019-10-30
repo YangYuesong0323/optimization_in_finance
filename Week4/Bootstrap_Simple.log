@@ -1,0 +1,24 @@
+--- Job Bootstrap_Simple.gms Start 10/23/19 20:33:56 28.2.0 r750fa45 DEX-DEG x86 64bit/Mac OS X
+--- GAMS Parameters defined
+    Input /Users/yuesongyang/Desktop/Optimization_In_Finance/Week4/Bootstrap_Simple.gms
+    PageSize 0
+    ScrDir /Users/yuesongyang/Desktop/Optimization_In_Finance/Week4/225a/
+    SysDir /Applications/GAMS28.2/sysdir/
+    LogOption 3
+    ErrMsg 1
+    ErrorLog 99
+    IDE 1
+    LstTitleLeftAligned 1
+GAMS 28.2.0   Copyright (C) 1987-2019 GAMS Development. All rights reserved
+Licensee: Course License Fall 2019                       G190805/0001AO-GEN
+          Technical University of Denmark, Management Engineering    DCE146
+          License for teaching and research at degree granting institutions
+          License Admin: Thomas Stidsen, thst@man.dtu.dk                   
+--- Starting compilation
+--- Bootstrap_Simple.gms(40) 3 Mb
+--- . BondData.inc(12) 3 Mb
+--- Bootstrap_Simple.gms(55) 3 Mb
+--- Starting execution: elapsed 0:00:00.002
+--- Bootstrap_Simple.gms(66) 4 Mb
+*** Status: Normal completion
+--- Job Bootstrap_Simple.gms Stop 10/23/19 20:33:56 elapsed 0:00:00.002

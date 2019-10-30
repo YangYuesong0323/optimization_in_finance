@@ -1,0 +1,117 @@
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/23/19 20:33:56 Page 1
+Bootstrapping the yield curve
+C o m p i l a t i o n
+
+
+   2   
+   4   
+   5  * Bootstrap_Simple.gms:  Bootstrapping the yield curve.
+   6   
+   7  SET Time Time periods /2001 * 2011/;
+   8   
+   9  ALIAS (Time, t, t1, t2);
+  10   
+  11  SCALARS
+  12     Now Current year;
+  13   
+  14  Now = 2001;
+  15   
+  16  PARAMETER
+  17     tau(t) Time in years;
+  18   
+  19  * Note: time starts from 0
+  20   
+  21  tau(t)  = ORD(t)-1;
+  22   
+  23  SET
+  24     Bonds Bonds universe
+  25      /DS-8-06, DS-8-03, DS-7-07,
+  26       DS-7-04, DS-6-11, DS-6-09,
+  27       DS-6-02, DS-5-05, DS-5-03, DS-4-02/;
+  28   
+  29   
+  30  ALIAS(Bonds, i);
+  31   
+  32  PARAMETERS
+  33           Price(i)       Bond prices
+  34           Coupon(i)      Coupons
+  35           Maturity(i)    Maturities
+  36           F(t,i)         Cashflows;
+  37   
+  38  * Bond data. Prices, coupons and maturities from the Danish market
+  39   
+INCLUDE    /Users/yuesongyang/Desktop/Optimization_In_Finance/Week4/BondData.inc
+  41  TABLE BondData(i,*)
+  42                       Price      Maturity     Coupon
+  43          DS-8-06      112.35       2006          8
+  44          DS-8-03      105.33       2003          8
+  45          DS-7-07      111.25       2007          7
+  46          DS-7-04      107.30       2004          7
+  47          DS-6-11      107.62       2011          6
+  48          DS-6-09      106.68       2009          6
+  49          DS-6-02      101.93       2002          6
+  50          DS-5-05      101.30       2005          5
+  51          DS-5-03      101.61       2003          5
+  52          DS-4-02      100.06       2002          4;
+  53   
+  54  * Copy/transform data. Note division by 100 to get unit data, and
+  55  * subtraction of "Now" from Maturity date (so consistent with tau):
+  56   
+  57  Price(i)    = BondData(i,"Price")/100;
+  58  Coupon(i)   = BondData(i,"Coupon")/100;
+  59  Maturity(i) = BondData(i,"Maturity") - Now;
+  60   
+  61  * Calculate the ex-coupon cashflow of Bond i in year t:
+  62   
+  63  F(t,i) = 1$(tau(t) = Maturity(i))
+  64              +  coupon(i) $ (tau(t) <= Maturity(i) AND tau(t) > 0);
+  65   
+  66  display F;
+EXIT /Users/yuesongyang/Desktop/Optimization_In_Finance/Week4/Bootstrap_Simple.gms
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/23/19 20:33:56 Page 2
+Bootstrapping the yield curve
+Include File Summary
+
+
+   SEQ   GLOBAL TYPE      PARENT   LOCAL  FILENAME
+
+     1        1 INPUT          0       0  /Users/yuesongyang/Desktop/Optimization_In_Finance/Week4/Bootstrap_Simple.gms
+     2       40 INCLUDE        1      40  ./Users/yuesongyang/Desktop/Optimization_In_Finance/Week4/BondData.inc
+     3       67 EXIT           1      55  /Users/yuesongyang/Desktop/Optimization_In_Finance/Week4/Bootstrap_Simple.gms
+
+
+COMPILATION TIME     =        0.001 SECONDS      3 MB  28.2.0 r750fa45 DEX-DEG
+GAMS 28.2.0  r750fa45 Released Aug 19, 2019 DEX-DEG x86 64bit/Mac OS X - 10/23/19 20:33:56 Page 3
+Bootstrapping the yield curve
+E x e c u t i o n
+
+
+----     66 PARAMETER F  Cashflows
+
+         DS-8-06     DS-8-03     DS-7-07     DS-7-04     DS-6-11     DS-6-09     DS-6-02     DS-5-05     DS-5-03     DS-4-02
+
+2002       0.080       0.080       0.070       0.070       0.060       0.060       1.060       0.050       0.050       1.040
+2003       0.080       1.080       0.070       0.070       0.060       0.060                   0.050       1.050
+2004       0.080                   0.070       1.070       0.060       0.060                   0.050
+2005       0.080                   0.070                   0.060       0.060                   1.050
+2006       1.080                   0.070                   0.060       0.060
+2007                               1.070                   0.060       0.060
+2008                                                       0.060       0.060
+2009                                                       0.060       1.060
+2010                                                       0.060
+2011                                                       1.060
+
+
+
+EXECUTION TIME       =        0.000 SECONDS      4 MB  28.2.0 r750fa45 DEX-DEG
+
+
+USER: Course License Fall 2019                       G190805/0001AO-GEN
+      Technical University of Denmark, Management Engineering    DCE146
+      License for teaching and research at degree granting institutions
+
+
+**** FILE SUMMARY
+
+Input      /Users/yuesongyang/Desktop/Optimization_In_Finance/Week4/Bootstrap_Simple.gms
+Output     /Users/yuesongyang/Desktop/Optimization_In_Finance/Week4/Bootstrap_Simple.lst
